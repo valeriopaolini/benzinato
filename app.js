@@ -74,7 +74,16 @@ function openNavigation(r){const q=encodeURIComponent(`${r.latitude},${r.longitu
 function showView(name){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${name}`));document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));$('page-title').textContent={ranking:'Classifica',map:'Mappa',settings:'Impostazioni'}[name];if(name==='ranking')renderRanking();if(name==='map')renderMap();if(name==='settings')renderDataStatus()}
 function renderCurrent(){notice();if($('view-ranking').classList.contains('active'))renderRanking();if($('view-map').classList.contains('active'))renderMap()}
 async function renderDataStatus(){const all=await dbAll().catch(()=>[]);$('last-check').textContent=humanDate(settings.lastCheck);$('local-generated').textContent=humanDate(all.map(x=>x.generatedAt).sort().at(-1));$('storage-size').textContent=`${(all.reduce((n,x)=>n+(x.bytes||JSON.stringify(x.records).length),0)/1024).toFixed(1)} KB`;notice()}
-function locate(){if(!navigator.geolocation){$('location-status').textContent='Geolocalizzazione non disponibile.';return} $('location-status').textContent='Ricerca posizione…';navigator.geolocation.getCurrentPosition(pos=>{settings.latitude=pos.coords.latitude;settings.longitude=pos.coords.longitude;saveSettings();$('location-status').textContent=`Posizione aggiornata (precisione ${Math.round(pos.coords.accuracy)} m).`;renderCurrent()},error=>{$('location-status').textContent=error.code===1?'Permesso GPS negato. Abilitalo nelle impostazioni del browser.':'Posizione GPS non disponibile.'},{enableHighAccuracy:true,timeout:12000,maximumAge:300000})}
+async function locationPermissionState(){
+  try{if(!navigator.permissions?.query)return'non supportato';return(await navigator.permissions.query({name:'geolocation'})).state}
+  catch(error){return`non disponibile: ${error.message||error.name}`}
+}
+async function locate(){
+  const status=$('location-status'),permission=await locationPermissionState(),context=`HTTPS: ${window.isSecureContext?'sì':'no'} · permesso API: ${permission} · modalità: ${window.matchMedia('(display-mode: standalone)').matches?'web app':'Safari'}`;
+  if(!navigator.geolocation){status.textContent=`Geolocalizzazione non disponibile. ${context}`;return}
+  status.textContent=`Ricerca posizione… ${context}`;
+  navigator.geolocation.getCurrentPosition(pos=>{settings.latitude=pos.coords.latitude;settings.longitude=pos.coords.longitude;saveSettings();status.textContent=`Posizione aggiornata (precisione ${Math.round(pos.coords.accuracy)} m). ${context}`;renderCurrent()},error=>{const names={1:'PERMISSION_DENIED',2:'POSITION_UNAVAILABLE',3:'TIMEOUT'};status.textContent=`GPS ${names[error.code]||'ERRORE'} (${error.code}): ${error.message||'nessun dettaglio da Safari'}. ${context}`;console.error('Geolocation error',{code:error.code,message:error.message,permission,secureContext:window.isSecureContext})},{enableHighAccuracy:true,timeout:12000,maximumAge:300000})
+}
 
 function bind(){
   document.querySelectorAll('.bottom-nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));$('sync-shortcut').onclick=()=>getManifest(true);$('check-updates').onclick=async()=>{await getManifest(true);renderFuelOptions();renderProvinces()};$('download-data').onclick=downloadData;$('locate').onclick=locate;
