@@ -1,0 +1,5 @@
+Estrazione del 2026-09-02
+idImpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Indirizzo|Comune|Provincia|Latitudine|Longitudine
+101|Gestore Uno|Marchio Uno|Stradale|Stazione Centro|Via Roma 1|Bologna|Bologna|44.4949|11.3426
+102|Gestore Due||Stradale|Coordinate mancanti|Via Nulla 1|Bologna|Bologna|0|0
+103|Gestore Tre|Marchio Tre|Stradale|Nome con | separatore|Via Verdi 2|Bologna|BO|44.5000|11.3500

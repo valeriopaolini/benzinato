@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#17241f"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Benzinato</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="assets/icon.svg"><link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="splash" class="splash" hidden><img class="splash-logo" src="assets/logo.png" alt=""><h1>Benzinato</h1><p>Il pieno, con criterio.</p></div>
+  <header><div><span class="eyebrow">BENZINATO</span><h1 id="page-title">Classifica</h1></div><button id="sync-shortcut" class="icon-button" aria-label="Controlla aggiornamenti">↻</button></header>
+  <main>
+    <section id="view-ranking" class="view active" aria-labelledby="page-title">
+      <div id="notice" class="notice" hidden></div>
+      <div class="quick-filters card"><label>Carburante<select id="quick-fuel"></select></label><label>Modalità<select id="quick-mode"><option value="self">Self-service</option><option value="served">Servito</option></select></label><label>Raggio<input id="quick-radius" type="number" min="1" step="1" inputmode="numeric"><span class="suffix">km</span></label><label>Ordina<select id="quick-sort"><option value="price">Prezzo</option><option value="distance">Distanza</option></select></label></div>
+      <p id="ranking-summary" class="summary"></p><div id="ranking-list" class="station-list"></div>
+    </section>
+    <section id="view-map" class="view"><div id="map"></div><div id="map-empty" class="map-message" hidden></div></section>
+    <section id="view-settings" class="view settings">
+      <div id="settings-message" class="notice" hidden></div>
+      <section class="card"><h2>Posizione</h2><label class="toggle"><input id="use-gps" type="checkbox"><span>Usa GPS</span></label><div class="grid-2"><label>Latitudine<input id="latitude" type="number" min="-90" max="90" step="any" inputmode="decimal"></label><label>Longitudine<input id="longitude" type="number" min="-180" max="180" step="any" inputmode="decimal"></label></div><button id="locate" class="secondary">Aggiorna posizione GPS</button><p id="location-status" class="help"></p></section>
+      <section class="card"><h2>Province</h2><input id="province-search" type="search" placeholder="Cerca provincia"><div class="button-row"><button id="select-all" class="secondary">Seleziona tutte</button><button id="select-none" class="secondary">Deseleziona tutte</button></div><div id="province-list" class="province-list"></div></section>
+      <section class="card"><h2>Ricerca</h2><label>Carburante<select id="fuel"></select></label><label>Modalità<select id="mode"><option value="self">Self-service</option><option value="served">Servito</option></select></label><label>Raggio (km)<input id="radius" type="number" min="1" step="1" inputmode="numeric" required></label><label>Ordinamento<select id="sort"><option value="price">Prezzo</option><option value="distance">Distanza</option></select></label></section>
+      <section class="card"><h2>Età dei prezzi</h2><div class="grid-2"><label>Verde fino a (ore)<input id="fresh-hours" type="number" min="1" step="1"></label><label>Giallo fino a (ore)<input id="old-hours" type="number" min="2" step="1"></label></div></section>
+      <section class="card"><h2>Navigazione esterna</h2><label>App preferita<select id="navigator"><option value="apple">Apple Maps</option><option value="google">Google Maps</option><option value="waze">Waze</option></select></label></section>
+      <section class="card"><h2>Dati locali</h2><dl><div><dt>Ultimo controllo</dt><dd id="last-check">Mai</dd></div><div><dt>Generati</dt><dd id="local-generated">—</dd></div><div><dt>Spazio</dt><dd id="storage-size">0 KB</dd></div></dl><div class="stack"><button id="check-updates" class="secondary">Controlla aggiornamenti</button><button id="download-data">Scarica / aggiorna dati</button><button id="clear-data" class="danger">Svuota dati scaricati</button><button id="reset-settings" class="text-button">Ripristina impostazioni</button></div></section>
+      <section class="card info"><h2>Informazioni</h2><p>I prezzi provengono dagli open data MIMIT e potrebbero non coincidere con quelli esposti all’impianto. Geolocalizzazione, mappa e navigazione possono coinvolgere servizi esterni.</p><p>Dati: MIMIT (IODL 2.0). Cartografia © OpenStreetMap contributors.</p><p>Versione 1.0.0</p></section>
+    </section>
+  </main>
+  <nav class="bottom-nav" aria-label="Navigazione principale"><button data-view="ranking" class="active"><span>⌁</span>Classifica</button><button data-view="map"><span>◇</span>Mappa</button><button data-view="settings"><span>⚙</span>Impostazioni</button></nav>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script><script src="app.js?v=3"></script>
+</body></html>
