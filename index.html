@@ -8,14 +8,13 @@
 </head>
 <body>
   <div id="splash" class="splash" hidden><img class="splash-logo" src="assets/logo.png" alt=""><h1>Benzinato</h1><p>Il pieno, con criterio.</p></div>
-  <header><div><span class="eyebrow">BENZINATO</span><h1 id="page-title">Classifica</h1></div><button id="sync-shortcut" class="icon-button" aria-label="Controlla aggiornamenti">↻</button></header>
+  <header><div class="page-heading"><span class="eyebrow">BENZINATO</span><h1 id="page-title">Classifica</h1></div><button id="sync-shortcut" class="icon-button" aria-label="Controlla aggiornamenti">↻</button></header>
   <main>
     <section id="view-ranking" class="view active" aria-labelledby="page-title">
       <div id="notice" class="notice" hidden></div>
-      <div class="quick-filters card"><label>Carburante<select id="quick-fuel"></select></label><label>Modalità<select id="quick-mode"><option value="self">Self-service</option><option value="served">Servito</option></select></label><label>Raggio<input id="quick-radius" type="number" min="1" step="1" inputmode="numeric"><span class="suffix">km</span></label><label>Ordina<select id="quick-sort"><option value="price">Prezzo</option><option value="distance">Distanza</option></select></label></div>
-      <p id="ranking-summary" class="summary"></p><div id="ranking-list" class="station-list"></div>
+      <div class="ranking-toolbar card"><p id="ranking-summary" class="summary"></p><label>Ordina per<select id="quick-sort"><option value="price">Prezzo</option><option value="distance">Distanza</option></select></label></div><div id="ranking-list" class="station-list"></div>
     </section>
-    <section id="view-map" class="view"><div id="map"></div><div id="map-empty" class="map-message" hidden></div></section>
+    <section id="view-map" class="view"><div id="map-detail" class="map-detail card" hidden></div><div id="map"></div><div id="map-empty" class="map-message" hidden></div></section>
     <section id="view-settings" class="view settings">
       <div id="settings-message" class="notice" hidden></div>
       <section class="card"><h2>Posizione</h2><label class="toggle"><input id="use-gps" type="checkbox"><span>Usa GPS</span></label><div class="grid-2"><label>Latitudine<input id="latitude" type="number" min="-90" max="90" step="any" inputmode="decimal"></label><label>Longitudine<input id="longitude" type="number" min="-180" max="180" step="any" inputmode="decimal"></label></div><button id="locate" class="secondary">Aggiorna posizione GPS</button><p id="location-status" class="help"></p></section>
@@ -29,5 +28,5 @@
   </main>
   <nav class="bottom-nav" aria-label="Navigazione principale"><button data-view="ranking" class="active"><span>⌁</span>Classifica</button><button data-view="map"><span>◇</span>Mappa</button><button data-view="settings"><span>⚙</span>Impostazioni</button></nav>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script><script src="app.js?v=4"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script><script src="app.js?v=5"></script>
 </body></html>
