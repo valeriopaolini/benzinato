@@ -1,20 +1,20 @@
-tipologia,gruppo
-Benzina,Benzina
-Gasolio,Gasolio
+tipologia,gruppo,principale
+Benzina,Benzina,1
+Gasolio,Gasolio,1
 Blue Diesel,Gasolio
-GPL,GPL
-HVOlution,HVO
+GPL,GPL,1
+HVOlution,HVO,0
 Supreme Diesel,Gasolio
-Metano,Metano compresso (GNC)
+Metano,Metano compresso (GNC),1
 Blue Super,Benzina
-HVO,HVO
+HVO,HVO,1
 Hi-Q Diesel,Gasolio
 Gasolio speciale,Gasolio
 HiQ Perform+,Benzina
 Gasolio Premium,Gasolio
 Benzina speciale,Benzina
 Benzina WR 100,Benzina
-GNL,Metano liquefatto (GNL)
+GNL,Metano liquefatto (GNL),1
 Diesel Shell V Power,Gasolio
 DieselMax,Gasolio
 L-GNC,Metano compresso (GNC)

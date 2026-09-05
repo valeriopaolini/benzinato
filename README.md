@@ -1,6 +1,6 @@
 # Benzinato
 
-Web app PWA statica, mobile-first, per consultare i prezzi carburante pubblicati dal MIMIT. Non usa un backend: il generatore locale prepara JSON per provincia e carburante; il browser scarica soltanto i dataset scelti dall'utente e li conserva in IndexedDB.
+Web app PWA statica, mobile-first, per consultare i prezzi carburante pubblicati dal MIMIT. Non usa un backend: il generatore locale prepara un JSON completo per provincia, con anagrafica degli impianti e tutte le relative offerte; il browser scarica soltanto le province scelte dall'utente e le conserva in IndexedDB.
 
 ## Avvio locale
 
@@ -22,7 +22,7 @@ Gli URL ufficiali sono già configurati. Per usare file locali o mirror:
 python3 tools/update_data.py --stations anagrafica.csv --prices prezzi.csv --output data
 ```
 
-Le tipologie commerciali presenti in `descCarburante` vengono raggruppate secondo `config/type_map.csv`. Il CSV ha le colonne `tipologia,gruppo`; ogni nuova tipologia MIMIT deve essere aggiunta esplicitamente. Se una tipologia non è mappata, il generatore termina con stato `22` senza pubblicare un dataset parziale. Ogni record conserva il valore MIMIT originale nel campo `product`.
+Le tipologie commerciali presenti in `descCarburante` vengono raggruppate secondo `config/type_map.csv`. Il CSV ha le colonne `tipologia,gruppo,principale`: ogni gruppo deve avere almeno un prodotto principale e ogni nuova tipologia MIMIT deve essere aggiunta esplicitamente. La classifica preferisce il prodotto principale; se un impianto non lo offre, usa la variante meno costosa del gruppo. Se una tipologia non è mappata, il generatore termina con stato `22` senza pubblicare un dataset parziale. Ogni offerta conserva il valore MIMIT originale nel campo `product`.
 
 Il parser accetta gli export moderni separati da `|` e quelli storici separati da `;`. Le righe senza coordinate, con provincia ignota o prezzo/data non validi vengono escluse; se la quota valida scende sotto il 70%, l'esecuzione fallisce.
 

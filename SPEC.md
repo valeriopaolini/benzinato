@@ -36,7 +36,7 @@ Un programma Python eseguito localmente:
 1. controlla e scarica anagrafica e prezzi dal MIMIT;
 2. riconosce l'eventuale assenza di nuovi dati;
 3. valida e unisce i record;
-4. genera file JSON distinti per provincia e carburante;
+4. genera un file JSON completo per provincia;
 5. genera il manifest dei dati;
 6. evita di modificare i file il cui contenuto non è cambiato;
 7. restituisce uno stato di uscita documentato.
@@ -63,8 +63,7 @@ Devono essere supportate tutte le tipologie di carburante presenti nella sorgent
 I dati pubblicati dalla pipeline sono:
 
 - suddivisi per provincia;
-- ulteriormente suddivisi per tipologia di carburante;
-- denormalizzati;
+- strutturati per impianto, con anagrafica unica e tutte le offerte associate;
 - JSON UTF-8 non pretty-printed;
 - immediatamente visualizzabili dal client;
 - nominati con identificatori stabili e sicuri per URL, mantenendo nel manifest l'etichetta originale da mostrare.
@@ -74,22 +73,17 @@ Struttura indicativa:
 ```text
 data/
   manifest.json
-  BO/
-    benzina.json
-    gasolio.json
-    gpl.json
-  RM/
-    benzina.json
-    gasolio.json
+  BO.json
+  RM.json
 ```
 
 Ogni record deve contenere almeno:
 
 ```json
-{"id":12345,"name":"Impianto esempio","brand":"Marchio","address":"Via Esempio 10","municipality":"Roma","province":"RM","latitude":41.902,"longitude":12.496,"isSelf":true,"price":1.729,"reportedAt":"2026-09-02T07:42:00+02:00"}
+{"id":12345,"name":"Impianto esempio","brand":"Marchio","address":"Via Esempio 10","municipality":"Roma","province":"RM","latitude":41.902,"longitude":12.496,"offers":[{"group":"benzina","product":"Benzina","primary":true,"isSelf":true,"price":1.729,"reportedAt":"2026-09-02T07:42:00+02:00"}]}
 ```
 
-Un record rappresenta un prezzo per un impianto, un carburante e una modalità. Record self-service e servito possono quindi essere distinti nello stesso file del carburante. Record privi di coordinate valide non vengono pubblicati nella prima versione, perché non sono utilizzabili né per distanza né per mappa.
+Ogni impianto contiene tutte le proprie offerte. `group` è la categoria normalizzata usata da filtri e classifica, mentre `product` conserva la denominazione commerciale MIMIT. La classifica preferisce le offerte marcate `primary`; in loro assenza usa la variante meno costosa del gruppo. Self-service e servito restano offerte distinte. Record privi di coordinate valide non vengono pubblicati.
 
 ## 5. Manifest dei dati
 
@@ -98,9 +92,8 @@ Un record rappresenta un prezzo per un impianto, un carburante e una modalità. 
 - versione dello schema;
 - data e ora di generazione;
 - elenco delle province, con sigla e nome completo;
-- carburanti disponibili per ogni provincia;
 - etichetta visuale e identificatore stabile di ogni carburante;
-- percorso, hash del contenuto, dimensione e numero di record di ogni file.
+- percorso, hash del contenuto, dimensione, numero di impianti e offerte di ogni file provinciale.
 
 Il manifest è la sola risorsa necessaria per determinare disponibilità e aggiornamenti. L'app non deve interrogare tutti i file per sapere se sono cambiati.
 
@@ -114,7 +107,7 @@ Regole:
 
 - nessuna provincia è selezionata al primo avvio;
 - senza province configurate non vengono scaricati dataset;
-- il controllo riguarda soltanto province configurate e carburanti necessari;
+- il controllo riguarda soltanto le province configurate;
 - se mancano dati locali necessari, l'app invita a scaricarli;
 - se è trascorso almeno un giorno dall'ultimo controllo, l'app suggerisce di verificare gli aggiornamenti;
 - il manifest viene richiesto con rivalidazione della cache HTTP;
@@ -300,8 +293,7 @@ La privacy non costituisce un vincolo architetturale specifico. Un disclaimer in
   assets/
   data/
     manifest.json
-    <provincia>/
-      <carburante>.json
+    <provincia>.json
   tools/
     update_data.py
     publish_data.sh

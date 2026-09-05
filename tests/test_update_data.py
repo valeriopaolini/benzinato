@@ -18,18 +18,20 @@ class GeneratorTests(unittest.TestCase):
             result = self.run_generator(directory)
             self.assertEqual(result.returncode, 0, result.stderr)
             manifest = json.loads((Path(directory) / "manifest.json").read_text())
-            self.assertEqual(manifest["schemaVersion"], 1)
+            self.assertEqual(manifest["schemaVersion"], 2)
             self.assertEqual(manifest["provinces"][0]["code"], "BO")
-            fuels = {f["id"]: f for f in manifest["provinces"][0]["fuels"]}
+            fuels = {f["id"]: f for f in manifest["fuels"]}
             self.assertEqual(set(fuels), {"benzina", "gasolio"})
             self.assertEqual(fuels["gasolio"]["label"], "Gasolio")
-            records = json.loads((Path(directory) / "BO" / "benzina.json").read_text())
-            self.assertEqual(len(records), 3)
-            self.assertTrue(records[0]["isSelf"])
-            self.assertEqual(records[0]["province"], "BO")
-            self.assertEqual(records[0]["product"], "Benzina")
-            self.assertIn("|", records[1]["name"])
-            self.assertNotIn("\n", (Path(directory) / "BO" / "benzina.json").read_text())
+            payload = json.loads((Path(directory) / "BO.json").read_text())
+            self.assertEqual(payload["schemaVersion"], 2)
+            self.assertEqual(len(payload["stations"]), 2)
+            self.assertEqual(len(payload["stations"][0]["offers"]), 3)
+            self.assertTrue(any(offer["isSelf"] for offer in payload["stations"][0]["offers"]))
+            self.assertTrue(all(offer["primary"] for offer in payload["stations"][0]["offers"]))
+            self.assertEqual(payload["stations"][0]["province"], "BO")
+            self.assertIn("|", payload["stations"][1]["name"])
+            self.assertNotIn("\n", (Path(directory) / "BO.json").read_text())
 
     def test_second_run_returns_no_update_and_preserves_mtime(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -49,7 +51,7 @@ class GeneratorTests(unittest.TestCase):
     def test_unmapped_fuel_returns_22(self):
         with tempfile.TemporaryDirectory() as directory:
             bad_map = Path(directory) / "type_map.csv"
-            bad_map.write_text("tipologia,gruppo\nBenzina,Benzina\n")
+            bad_map.write_text("tipologia,gruppo,principale\nBenzina,Benzina,1\n")
             result = subprocess.run([sys.executable, SCRIPT, "--stations", FIXTURES / "stations.csv", "--prices", FIXTURES / "prices.csv", "--type-map", bad_map, "--output", Path(directory) / "data"], text=True, capture_output=True)
             self.assertEqual(result.returncode, 22)
             self.assertIn("non presenti", result.stderr)

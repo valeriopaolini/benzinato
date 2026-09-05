@@ -83,26 +83,32 @@ def read_csv(raw: bytes, expected: set[str]) -> list[dict[str, str]]:
         rows.append({key: value.strip() for key, value in zip(columns, values)})
     return rows
 
-def read_type_map(path: Path) -> dict[str, str]:
+def read_type_map(path: Path) -> dict[str, dict[str, object]]:
     try:
         with path.open("r", encoding="utf-8-sig", newline="") as stream:
             reader = csv.DictReader(stream)
-            if not reader.fieldnames or {norm(value) for value in reader.fieldnames} != {"tipologia", "gruppo"}:
-                raise ValueError("type_map.csv deve contenere le colonne tipologia,gruppo")
+            if not reader.fieldnames or {norm(value) for value in reader.fieldnames} != {"tipologia", "gruppo", "principale"}:
+                raise ValueError("type_map.csv deve contenere le colonne tipologia,gruppo,principale")
             columns = {norm(value): value for value in reader.fieldnames}
             mapping = {}
             for line_number, row in enumerate(reader, 2):
                 source = (row.get(columns["tipologia"]) or "").strip()
                 group = (row.get(columns["gruppo"]) or "").strip()
-                if not source or not group:
+                primary_value = (row.get(columns["principale"]) or "0").strip()
+                if not source or not group or primary_value not in {"0", "1"}:
                     raise ValueError(f"valore vuoto in type_map.csv alla riga {line_number}")
-                if source in mapping and mapping[source] != group:
+                value = {"group":group,"primary":primary_value == "1"}
+                if source in mapping and mapping[source] != value:
                     raise ValueError(f"mappatura duplicata e incoerente per {source!r}")
-                mapping[source] = group
+                mapping[source] = value
     except OSError:
         raise
     if not mapping:
         raise ValueError("type_map.csv non contiene mappature")
+    groups = {value["group"] for value in mapping.values()}
+    missing_primary = sorted(group for group in groups if not any(value["group"] == group and value["primary"] for value in mapping.values()))
+    if missing_primary:
+        raise ValueError(f"prodotto principale mancante per: {', '.join(missing_primary)}")
     return mapping
 
 def parse_datetime(value: str) -> str:
@@ -116,7 +122,7 @@ def parse_datetime(value: str) -> str:
             pass
     raise ValueError(f"data non valida: {value}")
 
-def generate(station_raw: bytes, price_raw: bytes, type_map: dict[str, str], output: Path, min_valid_ratio: float) -> tuple[bool, int]:
+def generate(station_raw: bytes, price_raw: bytes, type_map: dict[str, dict[str, object]], output: Path, min_valid_ratio: float) -> tuple[bool, int]:
     stations_rows = read_csv(station_raw, {"idimpianto", "provincia", "latitudine", "longitudine"})
     price_rows = read_csv(price_raw, {"idimpianto", "desccarburante", "prezzo", "isself", "dtcomu"})
     stations, invalid_stations = {}, 0
@@ -130,25 +136,26 @@ def generate(station_raw: bytes, price_raw: bytes, type_map: dict[str, str], out
             stations[station_id] = {"id":station_id,"name":row.get("nomeimpianto", "") or row.get("gestore", "Impianto"),"brand":row.get("bandiera", ""),"address":row.get("indirizzo", ""),"municipality":row.get("comune", ""),"province":province[0],"provinceName":province[1],"latitude":latitude,"longitude":longitude}
         except (ValueError, KeyError):
             invalid_stations += 1
-    grouped, labels, invalid_prices, unmapped = defaultdict(list), {}, 0, set()
+    province_stations, labels, invalid_prices, unmapped, valid_prices = defaultdict(dict), {}, 0, set(), 0
     for row in price_rows:
         try:
             station = stations[int(row["idimpianto"])]
             product = row["desccarburante"].strip()
             if not product: raise ValueError()
-            label = type_map.get(product)
-            if not label:
+            mapped = type_map.get(product)
+            if not mapped:
                 unmapped.add(product)
                 continue
+            label = str(mapped["group"])
             fuel_id = slug(label)
             price = float(row["prezzo"].replace(",", "."))
             if not (0 < price < 20): raise ValueError()
             self_value = row["isself"].strip().lower()
             if self_value not in {"0", "1", "true", "false"}: raise ValueError()
-            record = {k:v for k,v in station.items() if k != "provinceName"}
-            record.update({"product":product,"isSelf":self_value in {"1", "true"},"price":price,"reportedAt":parse_datetime(row["dtcomu"])})
-            grouped[(station["province"], fuel_id)].append(record)
+            record = province_stations[station["province"]].setdefault(station["id"], {**{k:v for k,v in station.items() if k != "provinceName"},"offers":[]})
+            record["offers"].append({"group":fuel_id,"product":product,"primary":bool(mapped["primary"]),"isSelf":self_value in {"1", "true"},"price":price,"reportedAt":parse_datetime(row["dtcomu"])})
             labels[fuel_id] = label
+            valid_prices += 1
         except (ValueError, KeyError):
             invalid_prices += 1
     if unmapped:
@@ -156,29 +163,29 @@ def generate(station_raw: bytes, price_raw: bytes, type_map: dict[str, str], out
         suffix = "…" if len(unmapped) > 10 else ""
         raise RuntimeError(f"{len(unmapped)} tipologie carburante non presenti in type_map.csv: {sample}{suffix}")
     total = len(stations_rows) + len(price_rows)
-    valid = len(stations) + sum(map(len, grouped.values()))
-    if not stations or not grouped or (total and valid / total < min_valid_ratio):
+    valid = len(stations) + valid_prices
+    if not stations or not province_stations or (total and valid / total < min_valid_ratio):
         raise RuntimeError(f"troppi record non validi: {valid}/{total}")
     generated_at = datetime.now(ZoneInfo("Europe/Rome")).isoformat(timespec="seconds")
     province_entries = []
     changed = False
     active_paths = set()
-    for province_code in sorted({key[0] for key in grouped}):
-        fuels = []
-        for code, fuel_id in sorted(k for k in grouped if k[0] == province_code):
-            records = sorted(grouped[(code, fuel_id)], key=lambda r: (r["price"], r["id"], not r["isSelf"]))
-            payload = compact(records)
-            relative = f"{code}/{fuel_id}.json"
-            active_paths.add(relative)
-            changed |= atomic_write(output / relative, payload)
-            fuels.append({"id":fuel_id,"label":labels[fuel_id],"path":f"data/{relative}","sha256":hashlib.sha256(payload).hexdigest(),"bytes":len(payload),"records":len(records)})
+    for province_code, station_map in sorted(province_stations.items()):
+        records = sorted(station_map.values(), key=lambda r:r["id"])
+        for record in records:
+            record["offers"].sort(key=lambda o:(o["group"],o["isSelf"],not o["primary"],o["price"],o["product"]))
+        payload = compact({"schemaVersion":2,"province":province_code,"stations":records})
+        relative = f"{province_code}.json"
+        active_paths.add(relative)
+        changed |= atomic_write(output / relative, payload)
         name = next((name for name, code in PROVINCES.items() if code == province_code), province_code)
-        province_entries.append({"code":province_code,"name":name,"fuels":fuels})
+        province_entries.append({"code":province_code,"name":name,"path":f"data/{relative}","sha256":hashlib.sha256(payload).hexdigest(),"bytes":len(payload),"stations":len(records),"offers":sum(len(r["offers"]) for r in records)})
     # Remove only obsolete generated json files; directories and manifest are retained.
-    for old in output.glob("*/*.json"):
-        if old.relative_to(output).as_posix() not in active_paths:
+    for old in [*output.glob("*/*.json"),*output.glob("*.json")]:
+        if old.name != "manifest.json" and old.relative_to(output).as_posix() not in active_paths:
             old.unlink(); changed = True
-    manifest = {"schemaVersion":1,"generatedAt":generated_at,"provinces":province_entries}
+    fuels = [{"id":fuel_id,"label":label} for fuel_id,label in sorted(labels.items())]
+    manifest = {"schemaVersion":2,"generatedAt":generated_at,"fuels":fuels,"provinces":province_entries}
     previous = None
     manifest_path = output / "manifest.json"
     if manifest_path.exists():
